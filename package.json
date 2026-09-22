@@ -13,8 +13,9 @@
     "@capacitor/core": "latest",
     "@capacitor/ios": "latest"
   },
-  "devDependencies": {
-    "@capacitor/cli": "latest",
-    "@capacitor/assets": "latest"
-  }
+ "devDependencies": {
+  "@capacitor/cli": "latest",
+  "@capacitor/assets": "latest",
+  "typescript": "latest"
+}
 }
