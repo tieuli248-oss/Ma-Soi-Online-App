@@ -5,6 +5,10 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
 
+    environment:
+      xcode: latest
+      cocoapods: default
+
     scripts:
       - name: Install dependencies
         script: |
@@ -22,16 +26,40 @@ workflows:
         script: |
           npx cap sync ios
 
+      - name: Install CocoaPods if needed
+        script: |
+          if [ -f ios/App/Podfile ]; then
+            cd ios/App
+            pod install
+          fi
+
       - name: Build iOS Simulator app
         script: |
-          xcodebuild \
-            -workspace ios/App/App.xcworkspace \
-            -scheme App \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO
+          if [ -d ios/App/App.xcworkspace ]; then
+            echo "Building with Xcode workspace"
+            xcodebuild build \
+              -workspace ios/App/App.xcworkspace \
+              -scheme App \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -derivedDataPath build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+          else
+            echo "Workspace not found - building with Xcode project"
+            xcodebuild build \
+              -project ios/App/App.xcodeproj \
+              -scheme App \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -derivedDataPath build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+          fi
 
     artifacts:
       - build/Build/Products/Debug-iphonesimulator/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - /tmp/xcodebuild_logs/*.log
