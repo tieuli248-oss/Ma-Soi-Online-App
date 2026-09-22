@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma Sói Online - Admin</title>
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#080303;color:#f7eeee;font-family:Arial,Helvetica,sans-serif}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top,rgba(120,0,0,.22),transparent 38%),
+    linear-gradient(180deg,#120606,#050202 65%);
+}
+.wrap{width:min(1180px,94vw);margin:0 auto;padding:24px 0 40px}
+.top{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-bottom:18px;padding:16px 18px;border:1px solid rgba(255,70,70,.22);
+  border-radius:16px;background:rgba(15,5,5,.78)
+}
+.brand{font-size:24px;font-weight:900;letter-spacing:.5px}
+.brand small{display:block;margin-top:4px;color:#b9a8a8;font-size:11px;font-weight:500}
+.status{display:flex;align-items:center;gap:8px;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:#777}
+.dot.on{background:#45dc78;box-shadow:0 0 10px rgba(69,220,120,.65)}
+.grid{display:grid;grid-template-columns:330px 1fr;gap:16px}
+.card{
+  border:1px solid rgba(255,70,70,.18);border-radius:14px;
+  background:rgba(15,7,7,.82);box-shadow:0 15px 38px rgba(0,0,0,.28);
+  padding:16px
+}
+h2{font-size:16px;margin:0 0 13px;color:#ffd8d8}
+label{font-size:12px;color:#cbbaba}
+input{
+  width:100%;height:42px;margin-top:7px;padding:0 12px;color:#fff;
+  background:#080404;border:1px solid rgba(255,80,80,.24);border-radius:9px;outline:none
+}
+input:focus{border-color:rgba(255,100,100,.62)}
+button{
+  border:0;border-radius:9px;cursor:pointer;font-weight:800;
+  transition:.15s transform,.15s filter,.15s opacity
+}
+button:hover{filter:brightness(1.08)}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.primary{width:100%;height:42px;margin-top:10px;background:linear-gradient(#c92828,#760707);color:#fff}
+.ghost{height:36px;padding:0 12px;background:#201313;color:#eee;border:1px solid rgba(255,255,255,.09)}
+.danger{height:38px;padding:0 13px;background:#8d0d0d;color:#fff}
+.warn{height:38px;padding:0 13px;background:#8b5b05;color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.sep{height:1px;background:rgba(255,255,255,.07);margin:16px 0}
+.msg{min-height:18px;margin-top:9px;font-size:12px;color:#ff9c9c}
+.summary{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:14px
+}
+.stat{padding:11px;border-radius:10px;background:#0b0606;border:1px solid rgba(255,255,255,.06)}
+.stat span{display:block;font-size:10px;color:#958787}
+.stat strong{display:block;margin-top:4px;font-size:18px;color:#fff}
+.players{display:grid;gap:8px}
+.player{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:10px 11px;border-radius:10px;background:#0a0505;border:1px solid rgba(255,255,255,.06)
+}
+.player-main{min-width:0}
+.player-name{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-meta{margin-top:3px;font-size:11px;color:#9f9191}
+.badge{display:inline-block;margin-left:5px;padding:2px 6px;border-radius:999px;font-size:9px;background:#2a1111}
+.badge.host{background:#6d4507;color:#ffd887}
+.badge.bot{background:#18203d;color:#a7b8ff}
+.badge.dead{background:#3a0d0d;color:#ff9d9d}
+.kick{height:32px;padding:0 10px;background:#6d0d0d;color:#fff;font-size:11px}
+.empty{padding:24px;text-align:center;color:#726666;border:1px dashed rgba(255,255,255,.08);border-radius:10px}
+pre{
+  margin:0;max-height:340px;overflow:auto;padding:12px;border-radius:10px;
+  background:#050303;border:1px solid rgba(255,255,255,.06);font-size:11px;line-height:1.45;color:#cfc5c5
+}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.section-title strong{font-size:14px}
+.small{font-size:11px;color:#968989}
+@media(max-width:850px){
+  .grid{grid-template-columns:1fr}
+  .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .top{align-items:flex-start;flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      🐺 MA SÓI ONLINE — ADMIN
+      <small>Quản lý người chơi bị kẹt server / kick / reset phòng</small>
+    </div>
+    <div class="status"><span id="dot" class="dot"></span><span id="connText">Đang kết nối server...</span></div>
+  </div>
+
+  <div class="grid">
+    <aside>
+      <div class="card">
+        <h2>🔐 ĐĂNG NHẬP ADMIN</h2>
+        <label>Admin Key</label>
+        <input id="adminKey" type="password" autocomplete="current-password" placeholder="Nhập ADMIN_PASSWORD">
+        <button id="loginBtn" class="primary">ĐĂNG NHẬP</button>
+        <div id="loginMsg" class="msg"></div>
+
+        <div class="sep"></div>
+
+        <h2>⚙️ ĐIỀU KHIỂN</h2>
+        <div class="row">
+          <button id="refreshBtn" class="ghost" disabled>↻ Refresh</button>
+          <button id="kickAllBtn" class="danger" disabled>Kick All</button>
+          <button id="resetBtn" class="warn" disabled>Reset Room</button>
+          <button id="endBtn" class="warn" disabled>End Game</button>
+        </div>
+        <div class="small" style="margin-top:10px">
+          Key không được lưu vào HTML hay localStorage.
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="card">
+        <div class="summary">
+          <div class="stat"><span>PHASE</span><strong id="phase">—</strong></div>
+          <div class="stat"><span>NGƯỜI CHƠI</span><strong id="playerCount">0</strong></div>
+          <div class="stat"><span>HOST</span><strong id="hostName">—</strong></div>
+          <div class="stat"><span>TIMER</span><strong id="timer">—</strong></div>
+        </div>
+
+        <div class="section-title">
+          <strong>👥 NGƯỜI CHƠI TRÊN SERVER</strong>
+          <span id="updatedAt" class="small"></span>
+        </div>
+        <div id="players" class="players">
+          <div class="empty">Đăng nhập Admin để xem người chơi.</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="section-title">
+          <strong>🧾 SERVER STATE</strong>
+          <span class="small">Dùng để debug khi có người bị kẹt.</span>
+        </div>
+        <pre id="raw">{}</pre>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const SERVER_URL = "https://ma-soi-bot.onrender.com";
+const socket = io(SERVER_URL,{
+  transports:["websocket","polling"],
+  reconnection:true
+});
+
+let loggedIn = false;
+let lastState = null;
+
+const $ = id => document.getElementById(id);
+const dot = $("dot");
+const connText = $("connText");
+const loginBtn = $("loginBtn");
+const adminKey = $("adminKey");
+const loginMsg = $("loginMsg");
+const refreshBtn = $("refreshBtn");
+const kickAllBtn = $("kickAllBtn");
+const resetBtn = $("resetBtn");
+const endBtn = $("endBtn");
+const playersEl = $("players");
+const rawEl = $("raw");
+
+function setConnected(on){
+  dot.classList.toggle("on",!!on);
+  connText.textContent = on ? "Đã kết nối server" : "Mất kết nối server";
+}
+
+function setAdminEnabled(on){
+  loggedIn = !!on;
+  [refreshBtn,kickAllBtn,resetBtn,endBtn].forEach(b=>b.disabled=!on);
+}
+
+function esc(s){
+  return String(s??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+
+function formatTimer(state){
+  const endsAt = Number(
+    state?.timerEndsAt ??
+    state?.room?.timerEndsAt ??
+    state?.timer?.endsAt ??
+    0
+  );
+  if(!endsAt) return "—";
+  return Math.max(0,Math.ceil((endsAt-Date.now())/1000))+"s";
+}
+
+function extractPlayers(state){
+  const candidates = [
+    state?.players,
+    state?.room?.players,
+    state?.state?.players
+  ];
+  return candidates.find(Array.isArray) || [];
+}
+
+function extractHostId(state){
+  return state?.hostId ?? state?.room?.hostId ?? state?.state?.hostId ?? null;
+}
+
+function renderState(state){
+  lastState = state || {};
+  const players = extractPlayers(lastState);
+  const hostId = extractHostId(lastState);
+  const host = players.find(p=>p?.id===hostId);
+
+  $("phase").textContent =
+    String(lastState?.phase ?? lastState?.room?.phase ?? lastState?.state?.phase ?? "—");
+
+  $("playerCount").textContent = String(players.length);
+  $("hostName").textContent = host?.name || "—";
+  $("timer").textContent = formatTimer(lastState);
+  $("updatedAt").textContent = new Date().toLocaleTimeString("vi-VN");
+
+  if(!players.length){
+    playersEl.innerHTML = '<div class="empty">Không có người chơi trên server.</div>';
+  }else{
+    playersEl.innerHTML = players.map(p=>{
+      const isHost = p.id===hostId;
+      const badges = [
+        isHost ? '<span class="badge host">HOST</span>' : '',
+        p.isBot ? '<span class="badge bot">BOT</span>' : '',
+        p.alive===false ? '<span class="badge dead">DEAD</span>' : ''
+      ].join("");
+
+      const conn = p.connected===false ? "OFF" : "ON";
+      const role = p.role ? " · "+esc(p.role) : "";
+
+      return `
+        <div class="player">
+          <div class="player-main">
+            <div class="player-name">${esc(p.name||p.id||"Unknown")}${badges}</div>
+            <div class="player-meta">${conn}${role} · ID: ${esc(p.id||"")}</div>
+          </div>
+          <button class="kick" data-kick="${esc(p.id||"")}" ${p.isBot ? "" : ""}>KICK</button>
+        </div>`;
+    }).join("");
+  }
+
+  rawEl.textContent = JSON.stringify(lastState,null,2);
+}
+
+socket.on("connect",()=>setConnected(true));
+socket.on("disconnect",()=>setConnected(false));
+socket.on("connect_error",err=>{
+  setConnected(false);
+  loginMsg.textContent="Không kết nối được server: "+(err?.message||"");
+});
+
+socket.on("adminLoginResult",data=>{
+  const ok = data?.ok===true;
+  setAdminEnabled(ok);
+  loginMsg.textContent = data?.message || (ok ? "Đăng nhập thành công." : "Sai Admin Key.");
+  if(ok) socket.emit("adminRefresh");
+});
+
+socket.on("adminState",state=>{
+  renderState(state);
+});
+
+socket.on("actionError",data=>{
+  loginMsg.textContent = data?.message || "Thao tác không hợp lệ.";
+});
+
+loginBtn.addEventListener("click",()=>{
+  const password = adminKey.value.trim();
+  if(!password){
+    loginMsg.textContent="Nhập Admin Key.";
+    return;
+  }
+  socket.emit("adminLogin",{password});
+});
+
+adminKey.addEventListener("keydown",e=>{
+  if(e.key==="Enter") loginBtn.click();
+});
+
+refreshBtn.addEventListener("click",()=>socket.emit("adminRefresh"));
+
+playersEl.addEventListener("click",e=>{
+  const btn = e.target.closest("[data-kick]");
+  if(!btn || !loggedIn) return;
+  const id = btn.dataset.kick;
+  const p = extractPlayers(lastState).find(x=>x?.id===id);
+  if(!confirm("Kick "+(p?.name||id)+" khỏi server?")) return;
+  socket.emit("adminKickPlayer",{playerId:id});
+  setTimeout(()=>socket.emit("adminRefresh"),350);
+});
+
+kickAllBtn.addEventListener("click",()=>{
+  if(!confirm("KICK ALL toàn bộ người chơi khỏi server?")) return;
+  socket.emit("adminKickAll");
+  setTimeout(()=>socket.emit("adminRefresh"),350);
+});
+
+resetBtn.addEventListener("click",()=>{
+  if(!confirm("RESET ROOM? Toàn bộ state của phòng hiện tại sẽ được reset.")) return;
+  socket.emit("adminResetRoom");
+  setTimeout(()=>socket.emit("adminRefresh"),350);
+});
+
+endBtn.addEventListener("click",()=>{
+  if(!confirm("Kết thúc ván hiện tại bằng quyền Admin?")) return;
+  socket.emit("adminEndGame",{
+    winner:"Admin",
+    message:"Admin đã kết thúc ván."
+  });
+  setTimeout(()=>socket.emit("adminRefresh"),350);
+});
+
+setInterval(()=>{
+  if(lastState){
+    $("timer").textContent = formatTimer(lastState);
+  }
+},500);
+</script>
+</body>
+</html>

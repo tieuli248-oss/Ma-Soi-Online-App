@@ -1,0 +1,20 @@
+{
+  "name": "ma-soi-online-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS wrapper for Ma Sói Online",
+  "scripts": {
+    "sync:ios": "npx cap sync ios",
+    "open:ios": "npx cap open ios",
+    "copy": "npx cap copy",
+    "assets:ios": "npx capacitor-assets generate --ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "latest",
+    "@capacitor/ios": "latest"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "latest",
+    "@capacitor/assets": "latest"
+  }
+}
